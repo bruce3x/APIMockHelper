@@ -1,4 +1,7 @@
 # APIMockHelper
+
+[![PyPI version](https://badge.fury.io/py/api.mock.svg)](https://pypi.python.org/pypi/api.mock/1.0.2)
+
 Push config files to Android device. See more https://github.com/brucezz/APIMock
 
 ## Installation
