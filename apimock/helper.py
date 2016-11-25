@@ -3,16 +3,19 @@
 """API Mock Helper.
 
 Usage:
-    api.mock [init | push | clean] [-d DIR] [-v | --verbose]
+    api.mock [init | push] [-d DIR] [-v | --verbose]
+    api.mock clean remote [-d DIR] [-v | --verbose]
+    api.mock clean local [-v | --verbose]
+
     api.mock (-h | --help)
     api.mock --version
 
 Options:
     init          Generate default config files.
     push          Push configs to Android device.
-    clean         Remove config files.
+    clean         Remove config files on Android device.
     -d DIR        The location of config files (default current directory).
-    -v --verbose  Print more text.
+    -v --verbose  Print more messages.
     -h --help     Show this message.
     --version     Show version.
 
@@ -25,17 +28,26 @@ More information see:
 from __future__ import print_function
 
 import json
+import logging
 
 import os
 import re
 from device import get_device, get_devices
 from docopt import docopt
 from prettytable import PrettyTable
-from util import LOG_INFO, LOG_WARNING, info, warning, message, error, log_config
+# from util import LOG_INFO, LOG_WARNING, info, warning, message, log_config, error
+from logging import info, warning, error
+
+from util import message
+
+
+class ScriptError(RuntimeError):
+    def __init__(self, msg):
+        super(ScriptError, self).__init__(msg)
 
 
 class PushHelper(object):
-    VERSION = '1.0.3'
+    VERSION = '1.0.4'
 
     CONFIG_MOCK_DIR_NAME = 'mock'
 
@@ -71,7 +83,12 @@ class PushHelper(object):
         self.CONFIG_FILE, self.CONFIG_MOCK_DIR = PushHelper._build_paths(
             self.CONFIG_PATH)
 
-        log_config(LOG_INFO if verbose else LOG_WARNING)
+        # log_config(LOG_INFO if verbose else LOG_WARNING)
+
+        logging.basicConfig(
+            format='%(levelname)-8s %(message)s',
+            level=logging.INFO if verbose else logging.WARNING,
+        )
 
     @classmethod
     def _build_paths(cls, target):
@@ -91,17 +108,17 @@ class PushHelper(object):
         info('Generating config files at %s' % self.CONFIG_PATH)
 
         if os.path.exists(self.CONFIG_FILE):
-            warning('Found %s exist.' % self.CONFIG_FILE_NAME)
+            warning('Found file: %s' % self.CONFIG_FILE_NAME)
         else:
-            info('Create %s.' % self.CONFIG_FILE)
+            info('Create file: %s' % self.CONFIG_FILE)
             with open(self.CONFIG_FILE, 'w') as fp:
                 fp.write(json.dumps(self.DEFAULT_CONFIG,
                                     indent=4, sort_keys=True))
 
         if os.path.exists(self.CONFIG_MOCK_DIR):
-            warning('Found directory %s exist.' % self.CONFIG_MOCK_DIR_NAME)
+            warning('Found directory: %s' % self.CONFIG_MOCK_DIR_NAME)
         else:
-            info('Create directory %s.' % self.CONFIG_MOCK_DIR_NAME)
+            info('Create directory: %s' % self.CONFIG_MOCK_DIR_NAME)
             os.makedirs(self.CONFIG_MOCK_DIR)
 
         message('Init completed.')
@@ -119,8 +136,8 @@ class PushHelper(object):
         remote = config.get(self.KEY_REMOTE)
 
         if not remote:
-            error('Invalid value of "%s" in %s' % (self.KEY_REMOTE, self.CONFIG_FILE_NAME))
-            return
+            raise ScriptError('Invalid value of "%s" in %s' %
+                              (self.KEY_REMOTE, self.CONFIG_FILE_NAME))
 
         route = config.get(self.KEY_ROUTE)
 
@@ -151,7 +168,7 @@ class PushHelper(object):
             with open(path) as fp:
                 return json.loads(fp.read())
         except ValueError:
-            error('Invalid JSON format: %s' % path)
+            raise ScriptError('Invalid JSON format: %s' % path)
 
     @staticmethod
     def _check_file_exist(path):
@@ -163,7 +180,7 @@ class PushHelper(object):
         if os.path.exists(path):
             return True
         else:
-            error("File not found: %s" % path)
+            raise ScriptError("File not found: %s" % path)
 
     @staticmethod
     def _check_regex(regex):
@@ -175,7 +192,7 @@ class PushHelper(object):
         try:
             return re.compile(regex)
         except:
-            error('Invalid regex: %s' % regex)
+            raise ScriptError('Invalid regex: %s' % regex)
 
     @staticmethod
     def _select_device():
@@ -185,22 +202,24 @@ class PushHelper(object):
         """
         devices = map(get_device, get_devices())
         if not devices:
-            error('No devices.')
-        elif len(devices) == 1:
+            raise ScriptError('No devices.')
+
+        if len(devices) == 1:
             return devices[0]
-        else:
-            print('Found more than one devices:')
 
-            PushHelper._draw_table(devices)
+        message('Found more than one devices:')
 
-            select = raw_input('\nEnter the index of devices(0 ~ %d): ' % (len(devices) - 1))
-            try:
-                select = int(select)
-                if 0 <= select < len(devices):
-                    return devices[select]
-            except:
-                pass
-            error('Invalid input!')
+        PushHelper._draw_table(devices)
+
+        message('Enter the index of devices(0 ~ %d): ' % (len(devices) - 1), end='')
+        select = raw_input()
+        try:
+            select = int(select)
+            if 0 <= select < len(devices):
+                return devices[select]
+        except:
+            pass
+        raise ScriptError('Invalid input!')
 
     @staticmethod
     def _draw_table(devices):
@@ -212,7 +231,8 @@ class PushHelper(object):
         table = PrettyTable(['Index', 'Serial', 'Model'])
         for idx, device in enumerate(devices):
             table.add_row([idx, device.serial, device.model])
-        print(table)
+
+        map(message, table.get_string().split('\n'))
 
     def _push(self, device, remote):
         """
@@ -222,49 +242,67 @@ class PushHelper(object):
         """
         info('Pushing configs to [%s] %s ...' % (device.serial, remote))
 
-        remote_config_file, remote_mock_dir = self._build_paths(remote)
+        config_file, mock_dir = self._build_paths(remote)
 
-        device.push(self.CONFIG_FILE, remote_config_file)
-        device.push(self.CONFIG_MOCK_DIR, remote_mock_dir)
+        device.push(self.CONFIG_FILE, config_file)
+        device.push(self.CONFIG_MOCK_DIR, mock_dir)
 
     def push(self):
         """
         安装配置文件命令
         """
-        remote = self._check_config()
 
-        if not remote:
-            return
-
-        device = self._select_device()
-
-        if not device:
-            return
-
+        remote, device = self.clean_remote()
         self._push(device, remote)
 
         message('Push completed!')
 
-    def clean(self):
+        return remote, device
 
+    def clean_remote(self):
+        """
+        清空设备上的配置文件
+        """
+        remote = self._check_config()
+        device = self._select_device()
+
+        exit_code, stdout, stderr = device.shell_nocheck(['rm', '-r', remote])
+        if exit_code != 0:
+            warning(stderr.strip() if stderr else stdout.strip())
+
+        message('Clean remote completed!')
+
+        return remote, device
+
+    def clean_local(self):
+        """
+        清空本地配置文件
+        """
         if os.path.exists(self.CONFIG_FILE):
             warning('Removing %s' % self.CONFIG_FILE)
             os.remove(self.CONFIG_FILE)
         if os.path.exists(self.CONFIG_MOCK_DIR):
             warning('Removing directory %s' % self.CONFIG_MOCK_DIR)
             os.removedirs(self.CONFIG_MOCK_DIR)
-        message('Clean complete.')
+
+        message('Clean local complete.')
 
     @classmethod
     def process_args(cls):
         args = docopt(__doc__, version='API Mock Helper version %s' % cls.VERSION)
         helper = cls(args['-d'], args['--verbose'])
-        if args['init']:
-            helper.init()
-        elif args['push']:
-            helper.push()
-        elif args['clean']:
-            helper.clean()
+
+        try:
+            if args['init']:
+                helper.init()
+            elif args['push']:
+                helper.push()
+            elif args['clean'] and args['local']:
+                helper.clean_local()
+            elif args['clean'] and args['remote']:
+                helper.clean_remote()
+        except ScriptError, e:
+            error(e.message)
 
 
 def main():
