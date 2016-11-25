@@ -193,8 +193,7 @@ class PushHelper(object):
 
             PushHelper._draw_table(devices)
 
-            select = raw_input(
-                '\nEnter the index of devices(0 ~ %d): ' % (len(devices) - 1))
+            select = raw_input('\nEnter the index of devices(0 ~ %d): ' % (len(devices) - 1))
             try:
                 select = int(select)
                 if 0 <= select < len(devices):
@@ -244,7 +243,7 @@ class PushHelper(object):
 
         self._push(device, remote)
 
-        info('Push completed!')
+        message('Push completed!')
 
     def clean(self):
 
@@ -254,11 +253,11 @@ class PushHelper(object):
         if os.path.exists(self.CONFIG_MOCK_DIR):
             warning('Removing directory %s' % self.CONFIG_MOCK_DIR)
             os.removedirs(self.CONFIG_MOCK_DIR)
+        message('Clean complete.')
 
     @classmethod
     def process_args(cls):
-        args = docopt(
-            __doc__, version='API Mock Helper version %s' % cls.VERSION)
+        args = docopt(__doc__, version='API Mock Helper version %s' % cls.VERSION)
         helper = cls(args['-d'], args['--verbose'])
         if args['init']:
             helper.init()
