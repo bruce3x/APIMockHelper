@@ -1,33 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""API Mock Push helper.
-
-Usage:
-    api_mock.py [init | push | clean] [-d DIR] [-v | --verbose]
-    api_mock.py (-h | --help)
-    api_mock.py --version
-
-Options:
-    init              Generate default config files.
-    push              Push configs to Android device.
-    clean             Remove config files.
-    -d DIR            The location of config files (default current directory).
-    -v --verbose      Print more text.
-    -h --help         Show this message.
-    --version         Show version.
-
-"""
 
 from __future__ import print_function
 
 import json
 import logging
+
 import os
 import re
-
-from docopt import docopt
-
 from device import get_device, get_devices
+from docopt import docopt
 
 
 class PushHelper(object):
@@ -270,5 +252,9 @@ class PushHelper(object):
             helper.clean()
 
 
-if __name__ == '__main__':
+def main():
     PushHelper.process_args()
+
+
+if __name__ == '__main__':
+    main()
