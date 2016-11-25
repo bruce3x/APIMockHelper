@@ -9,7 +9,7 @@ Push config files to Android device. See more https://github.com/brucezz/APIMock
 Install by `pip`:
 
 ```
-pip install api.mock
+pip install api.mock --upgrade
 ```
 
 ## USAGE

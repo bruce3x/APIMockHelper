@@ -35,7 +35,7 @@ from util import LOG_INFO, LOG_WARNING, info, warning, message, error, log_confi
 
 
 class PushHelper(object):
-    VERSION = '1.0.2'
+    VERSION = '1.0.3'
 
     CONFIG_MOCK_DIR_NAME = 'mock'
 
