@@ -1,19 +1,41 @@
 #!/usr/bin/env python
 # coding=utf-8
+"""API Mock Helper.
+
+Usage:
+    api.mock [init | push | clean] [-d DIR] [-v | --verbose]
+    api.mock (-h | --help)
+    api.mock --version
+
+Options:
+    init          Generate default config files.
+    push          Push configs to Android device.
+    clean         Remove config files.
+    -d DIR        The location of config files (default current directory).
+    -v --verbose  Print more text.
+    -h --help     Show this message.
+    --version     Show version.
+
+More information see:
+  https://github.com/brucezz/APIMockHelper
+  https://github.com/brucezz/APIMock
+
+"""
 
 from __future__ import print_function
 
 import json
-import logging
 
 import os
 import re
 from device import get_device, get_devices
 from docopt import docopt
+from prettytable import PrettyTable
+from util import LOG_INFO, LOG_WARNING, info, warning, message, error, log_config
 
 
 class PushHelper(object):
-    VERSION = '1.1'
+    VERSION = '1.0.2'
 
     CONFIG_MOCK_DIR_NAME = 'mock'
 
@@ -49,11 +71,7 @@ class PushHelper(object):
         self.CONFIG_FILE, self.CONFIG_MOCK_DIR = PushHelper._build_paths(
             self.CONFIG_PATH)
 
-        logging.basicConfig(
-            format='%(levelname)-8s %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-            level=logging.INFO if verbose else logging.WARNING,
-        )
+        log_config(LOG_INFO if verbose else LOG_WARNING)
 
     @classmethod
     def _build_paths(cls, target):
@@ -70,24 +88,23 @@ class PushHelper(object):
         """
         初始化创建配置文件和数据文件夹
         """
-        logging.info('Generating config files at %s', self.CONFIG_PATH)
+        info('Generating config files at %s' % self.CONFIG_PATH)
 
         if os.path.exists(self.CONFIG_FILE):
-            logging.warning('Found %s exist.', self.CONFIG_FILE_NAME)
+            warning('Found %s exist.' % self.CONFIG_FILE_NAME)
         else:
-            logging.debug('Create %s.', self.CONFIG_FILE)
+            info('Create %s.' % self.CONFIG_FILE)
             with open(self.CONFIG_FILE, 'w') as fp:
                 fp.write(json.dumps(self.DEFAULT_CONFIG,
                                     indent=4, sort_keys=True))
 
         if os.path.exists(self.CONFIG_MOCK_DIR):
-            logging.warning('Found directory %s exist.',
-                            self.CONFIG_MOCK_DIR_NAME)
+            warning('Found directory %s exist.' % self.CONFIG_MOCK_DIR_NAME)
         else:
-            logging.debug('Create directory %s.', self.CONFIG_MOCK_DIR_NAME)
+            info('Create directory %s.' % self.CONFIG_MOCK_DIR_NAME)
             os.makedirs(self.CONFIG_MOCK_DIR)
 
-        logging.info('Init completed.')
+        message('Init completed.')
 
     def _check_config(self):
         """
@@ -102,8 +119,7 @@ class PushHelper(object):
         remote = config.get(self.KEY_REMOTE)
 
         if not remote:
-            logging.error('Invalid value of "%s" in %s',
-                          self.KEY_REMOTE, self.CONFIG_FILE_NAME)
+            error('Invalid value of "%s" in %s' % (self.KEY_REMOTE, self.CONFIG_FILE_NAME))
             return
 
         route = config.get(self.KEY_ROUTE)
@@ -135,7 +151,7 @@ class PushHelper(object):
             with open(path) as fp:
                 return json.loads(fp.read())
         except ValueError:
-            logging.error('Invalid JSON format: %s', path)
+            error('Invalid JSON format: %s' % path)
 
     @staticmethod
     def _check_file_exist(path):
@@ -147,7 +163,7 @@ class PushHelper(object):
         if os.path.exists(path):
             return True
         else:
-            logging.error("File not found: %s", path)
+            error("File not found: %s" % path)
 
     @staticmethod
     def _check_regex(regex):
@@ -159,7 +175,7 @@ class PushHelper(object):
         try:
             return re.compile(regex)
         except:
-            logging.error('Invalid regex: %s', regex)
+            error('Invalid regex: %s' % regex)
 
     @staticmethod
     def _select_device():
@@ -169,11 +185,11 @@ class PushHelper(object):
         """
         devices = map(get_device, get_devices())
         if not devices:
-            logging.error('No devices.')
+            error('No devices.')
         elif len(devices) == 1:
             return devices[0]
         else:
-            print('Found more than one devices:\n')
+            print('Found more than one devices:')
 
             PushHelper._draw_table(devices)
 
@@ -184,7 +200,8 @@ class PushHelper(object):
                 if 0 <= select < len(devices):
                     return devices[select]
             except:
-                logging.error('Invalid input!')
+                pass
+            error('Invalid input!')
 
     @staticmethod
     def _draw_table(devices):
@@ -192,12 +209,11 @@ class PushHelper(object):
         绘制展示多设备信息的表格
         :param devices:多个 Android 设备
         """
-        print(' '.join('+' + '-' * 4 + '+' + '-' * 12 + '+' + '-' * 24 + '+'))
-        print('| %-7s | %-23s | %-47s |' % ('Index', 'Serial', 'Model'))
-        print(' '.join('+' + '-' * 4 + '+' + '-' * 12 + '+' + '-' * 24 + '+'))
+
+        table = PrettyTable(['Index', 'Serial', 'Model'])
         for idx, device in enumerate(devices):
-            print('| # %-5d | %-23s | %-47s |' % (idx, device.serial, device.model))
-        print(' '.join('+' + '-' * 4 + '+' + '-' * 12 + '+' + '-' * 24 + '+'))
+            table.add_row([idx, device.serial, device.model])
+        print(table)
 
     def _push(self, device, remote):
         """
@@ -205,7 +221,7 @@ class PushHelper(object):
         :param device: 目标设备
         :param remote: 设备上的位置
         """
-        logging.info('Pushing configs to [%s] %s ...', device.serial, remote)
+        info('Pushing configs to [%s] %s ...' % (device.serial, remote))
 
         remote_config_file, remote_mock_dir = self._build_paths(remote)
 
@@ -228,21 +244,21 @@ class PushHelper(object):
 
         self._push(device, remote)
 
-        logging.info('Push completed!')
+        info('Push completed!')
 
     def clean(self):
 
         if os.path.exists(self.CONFIG_FILE):
-            logging.warning('Removing %s', self.CONFIG_FILE)
+            warning('Removing %s' % self.CONFIG_FILE)
             os.remove(self.CONFIG_FILE)
         if os.path.exists(self.CONFIG_MOCK_DIR):
-            logging.warning('Removing directory %s', self.CONFIG_MOCK_DIR)
+            warning('Removing directory %s' % self.CONFIG_MOCK_DIR)
             os.removedirs(self.CONFIG_MOCK_DIR)
 
     @classmethod
     def process_args(cls):
         args = docopt(
-            __doc__, version='API Mock Push Helper version %s' % cls.VERSION)
+            __doc__, version='API Mock Helper version %s' % cls.VERSION)
         helper = cls(args['-d'], args['--verbose'])
         if args['init']:
             helper.init()
