@@ -28,16 +28,18 @@ Usage:
     api.mock --version
 
 Options:
-    init          Generate default config files.
-    push          Push configs to Android device.
-    clean         Remove config files on Android device.
-    -d DIR        The location of config files (default current directory).
-    -v --verbose  Print more messages.
-    -h --help     Show this message.
-    --version     Show version.
+    init                Generate default config files.
+    push                Push configs to Android device.
+    clean remote        Remove config files on Android device.
+    clean local         Remove local config files.
+    -d DIR              The location of config files (default current directory).
+    -v --verbose        Print more messages.
+    -h --help           Show this message.
+    --version           Show version.
 
 More information see:
   https://github.com/brucezz/APIMockHelper
   https://github.com/brucezz/APIMock
+
 
 ```
