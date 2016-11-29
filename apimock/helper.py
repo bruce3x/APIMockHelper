@@ -46,7 +46,7 @@ class ScriptError(RuntimeError):
 
 
 class PushHelper(object):
-    VERSION = '1.0.5'
+    VERSION = '1.0.6'
 
     CONFIG_MOCK_DIR_NAME = 'mock'
 
