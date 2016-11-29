@@ -4,8 +4,7 @@
 
 Usage:
     api.mock [init | push] [-d DIR] [-v | --verbose]
-    api.mock clean remote [-d DIR] [-v | --verbose]
-    api.mock clean local [-v | --verbose]
+    api.mock clean [remote | local] [-d DIR] [-v | --verbose]
 
     api.mock (-h | --help)
     api.mock --version
@@ -15,7 +14,7 @@ Options:
     push                Push configs to Android device.
     clean remote        Remove config files on Android device.
     clean local         Remove local config files.
-    -d DIR              The location of config files (default current directory).
+    -d DIR              The location of local config files (default current directory).
     -v --verbose        Print more messages.
     -h --help           Show this message.
     --version           Show version.
@@ -30,6 +29,7 @@ from __future__ import print_function
 
 import json
 import logging
+import shutil
 from logging import info, warning, error
 
 import os
@@ -282,7 +282,7 @@ class PushHelper(object):
             os.remove(self.CONFIG_FILE)
         if os.path.exists(self.CONFIG_MOCK_DIR):
             warning('Removing directory %s' % self.CONFIG_MOCK_DIR)
-            os.removedirs(self.CONFIG_MOCK_DIR)
+            shutil.rmtree(self.CONFIG_MOCK_DIR)
 
         message('Clean local complete.')
 
