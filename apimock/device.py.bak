@@ -147,7 +147,7 @@ def _get_subprocess_args(args):
     # Only do this slow work-around if Unicode is in the cmd line on Windows.
     # PowerShell takes 600-700ms to startup on a 2013-2014 machine, which is
     # very slow.
-    if os.name != 'nt' or all(not isinstance(arg, str) for arg in args[0]):
+    if os.name != 'nt' or all(not isinstance(arg, unicode) for arg in args[0]):
         return args
 
     def escape_arg(arg):
@@ -156,23 +156,23 @@ def _get_subprocess_args(args):
         arg = subprocess.list2cmdline([arg])
         # Escape single-quote with another single-quote because we're about
         # to...
-        arg = arg.replace("'", "''")
+        arg = arg.replace(u"'", u"''")
         # ...put the arg in a single-quoted string for PowerShell to parse.
-        arg = "'" + arg + "'"
+        arg = u"'" + arg + u"'"
         return arg
 
     # Escape command line args.
-    argv = list(map(escape_arg, args[0]))
+    argv = map(escape_arg, args[0])
     # Cause script errors (such as adb not found) to stop script immediately
     # with an error.
-    ps_code = '$ErrorActionPreference = "Stop"\r\n'
+    ps_code = u'$ErrorActionPreference = "Stop"\r\n'
     # Add current directory to the PATH var, to match cmd.exe/CreateProcess()
     # behavior.
-    ps_code += '$env:Path = ".;" + $env:Path\r\n'
+    ps_code += u'$env:Path = ".;" + $env:Path\r\n'
     # Precede by &, the PowerShell call operator, and separate args by space.
-    ps_code += '& ' + ' '.join(argv)
+    ps_code += u'& ' + u' '.join(argv)
     # Make the PowerShell exit code the exit code of the subprocess.
-    ps_code += '\r\nExit $LastExitCode'
+    ps_code += u'\r\nExit $LastExitCode'
     # Encode as UTF-16LE (without Byte-Order-Mark) which Windows natively
     # understands.
     ps_code = ps_code.encode('utf-16le')

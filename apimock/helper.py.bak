@@ -25,7 +25,7 @@ More information see:
 
 """
 
-
+from __future__ import print_function
 
 import json
 import logging
@@ -34,10 +34,10 @@ from logging import info, warning, error
 
 import os
 import re
-from .device import get_device, get_devices
+from device import get_device, get_devices
 from docopt import docopt
 from prettytable import PrettyTable
-from .util import message
+from util import message
 
 
 class ScriptError(RuntimeError):
@@ -141,7 +141,7 @@ class PushHelper(object):
         route = config.get(self.KEY_ROUTE)
 
         if route:
-            for regex, data in route.items():
+            for regex, data in route.iteritems():
                 # check regex
                 if not self._check_regex(regex):
                     return
@@ -199,7 +199,7 @@ class PushHelper(object):
         在在线设备多余 1 台时, 通过终端输入来选取.
         仅有 1 台在线时, 自动选取.
         """
-        devices = list(map(get_device, get_devices()))
+        devices = map(get_device, get_devices())
         if not devices:
             raise ScriptError('No devices.')
 
@@ -211,7 +211,7 @@ class PushHelper(object):
         PushHelper._draw_table(devices)
 
         message('Enter the index of devices(0 ~ %d): ' % (len(devices) - 1), end='')
-        select = input()
+        select = raw_input()
         try:
             select = int(select)
             if 0 <= select < len(devices):
@@ -231,7 +231,7 @@ class PushHelper(object):
         for idx, device in enumerate(devices):
             table.add_row([idx, device.serial, device.model])
 
-        list(map(message, table.get_string().split('\n')))
+        map(message, table.get_string().split('\n'))
 
     def _push(self, device, remote):
         """
@@ -300,7 +300,7 @@ class PushHelper(object):
                 helper.clean_local()
             elif args['clean'] and args['remote']:
                 helper.clean_remote()
-        except ScriptError as e:
+        except ScriptError, e:
             error(e.message)
 
 
